@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Toe - Ultimate Edition</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #74ebd5 0%, #acb6e5 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            color: #333;
+        }
+        #game-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            max-width: 450px;
+            width: 100%;
+            text-align: center;
+            animation: fadeIn 1s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        h1 {
+            color: #2c3e50;
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+        }
+        #mode-selection button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            margin: 10px;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.2s, background 0.3s;
+        }
+        #mode-selection button:hover {
+            background: #2980b9;
+            transform: scale(1.05);
+        }
+        #scores {
+            font-size: 18px;
+            margin: 10px 0;
+            padding: 10px;
+            background: #ecf0f1;
+            border-radius: 10px;
+        }
+        #board {
+            display: grid;
+            grid-template-columns: repeat(3, 120px);
+            grid-gap: 10px;
+            margin: 20px auto;
+            justify-content: center;
+        }
+        .cell {
+            width: 120px;
+            height: 120px;
+            background: #fff;
+            border: 3px solid #2c3e50;
+            border-radius: 15px;
+            font-size: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.3s, transform 0.2s;
+        }
+        .cell:hover {
+            background: #ecf0f1;
+            transform: scale(1.02);
+        }
+        .cell.x {
+            color: #e74c3c;
+            animation: mark 0.3s ease;
+        }
+        .cell.o {
+            color: #27ae60;
+            animation: mark 0.3s ease;
+        }
+        @keyframes mark {
+            from { transform: scale(0); }
+            to { transform: scale(1); }
+        }
+        .win {
+            background: #ffff99 !important;
+            border-color: gold !important;
+            animation: highlight 1s ease;
+        }
+        @keyframes highlight {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        #status {
+            font-size: 24px;
+            color: #2c3e50;
+            margin: 20px 0;
+            font-weight: 600;
+        }
+        button {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s, transform 0.2s;
+            margin: 5px;
+        }
+        button:hover {
+            background: #c0392b;
+            transform: scale(1.05);
+        }
+        #play-again {
+            background: #27ae60;
+        }
+        #play-again:hover {
+            background: #219a52;
+        }
+        .confetti {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+        }
+        .confetti div {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: #f1c40f;
+            opacity: 0.8;
+            animation: fall 2s linear infinite;
+        }
+        @keyframes fall {
+            0% { transform: translateY(-10vh) rotate(0deg); }
+            100% { transform: translateY(100vh) rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <h1>Tic Tac Toe</h1>
+        <div id="mode-selection">
+            <button onclick="startGame('player')">Player vs Player</button>
+            <button onclick="startGame('computer')">Player vs Computer</button>
+        </div>
+        <div id="scores">X Wins: <span id="xWins">0</span> | O Wins: <span id="oWins">0</span> | Draws: <span id="draws">0</span></div>
+        <div id="board"></div>
+        <div id="status"></div>
+        <button id="play-again" onclick="playAgain()" style="display: none;">Play Again</button>
+        <button id="reset-scores" onclick="resetScores()" style="display: none;">Reset Scores</button>
+    </div>
+    <div class="confetti" id="confetti"></div>
+
+    <script>
+        let board = Array(9).fill(null);
+        let currentPlayer = 'X';
+        let gameMode = null;
+        let gameOver = false;
+        let xWins = 0;
+        let oWins = 0;
+        let draws = 0;
+
+        const winningConditions = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8],
+            [0, 3, 6], [1, 4, 7], [2, 5, 8],
+            [0, 4, 8], [2, 4, 6]
+        ];
+
+        function startGame(mode) {
+            gameMode = mode;
+            document.getElementById('mode-selection').style.display = 'none';
+            createBoard();
+            updateStatus(`${gameMode === 'computer' ? 'Your' : 'Player X\'s'} turn`);
+            document.getElementById('play-again').style.display = 'block';
+            document.getElementById('reset-scores').style.display = 'block';
+        }
+
+        function createBoard() {
+            const boardElement = document.getElementById('board');
+            boardElement.innerHTML = '';
+            for (let i = 0; i < 9; i++) {
+                const cell = document.createElement('div');
+                cell.classList.add('cell');
+                cell.dataset.index = i;
+                cell.addEventListener('click', handleClick);
+                boardElement.appendChild(cell);
+            }
+        }
+
+        function handleClick(event) {
+            if (gameOver || gameMode === null) return;
+            const index = parseInt(event.target.dataset.index);
+            if (board[index] !== null) return;
+
+            board[index] = currentPlayer;
+            event.target.textContent = currentPlayer;
+            event.target.classList.add(currentPlayer.toLowerCase());
+
+            const winInfo = checkWin();
+            if (winInfo) {
+                highlightWinningLine(winInfo.condition);
+                endGame(currentPlayer + ' wins');
+                return;
+            }
+            if (checkDraw()) {
+                endGame('draw');
+                return;
+            }
+
+            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+            updateStatus(`${gameMode === 'computer' && currentPlayer === 'O' ? 'Computer\'s' : (gameMode === 'computer' && currentPlayer === 'X' ? 'Your' : 'Player ' + currentPlayer + '\'s')} turn`);
+
+            if (gameMode === 'computer' && currentPlayer === 'O') {
+                setTimeout(computerMove, 500);
+            }
+        }
+
+        function computerMove() {
+            const move = findBestMove();
+            board[move] = 'O';
+            const cell = document.querySelector(`[data-index="${move}"]`);
+            cell.textContent = 'O';
+            cell.classList.add('o');
+
+            const winInfo = checkWin();
+            if (winInfo) {
+                highlightWinningLine(winInfo.condition);
+                endGame('O wins');
+                return;
+            }
+            if (checkDraw()) {
+                endGame('draw');
+                return;
+            }
+
+            currentPlayer = 'X';
+            updateStatus('Your turn');
+        }
+
+        function findBestMove() {
+            let bestScore = -Infinity;
+            let bestMove = -1;
+            for (let i = 0; i < 9; i++) {
+                if (board[i] === null) {
+                    board[i] = 'O';
+                    let score = minimax(board, 0, false);
+                    board[i] = null;
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestMove = i;
+                    }
+                }
+            }
+            return bestMove;
+        }
+
+        function minimax(tempBoard, depth, isMaximizing) {
+            const winInfo = checkWinWithBoard(tempBoard);
+            if (winInfo) {
+                return isMaximizing ? -10 + depth : 10 - depth;
+            }
+            if (checkDrawWithBoard(tempBoard)) {
+                return 0;
+            }
+
+            if (isMaximizing) {
+                let bestScore = -Infinity;
+                for (let i = 0; i < 9; i++) {
+                    if (tempBoard[i] === null) {
+                        tempBoard[i] = 'O';
+                        let score = minimax(tempBoard, depth + 1, false);
+                        tempBoard[i] = null;
+                        bestScore = Math.max(score, bestScore);
+                    }
+                }
+                return bestScore;
+            } else {
+                let bestScore = Infinity;
+                for (let i = 0; i < 9; i++) {
+                    if (tempBoard[i] === null) {
+                        tempBoard[i] = 'X';
+                        let score = minimax(tempBoard, depth + 1, true);
+                        tempBoard[i] = null;
+                        bestScore = Math.min(score, bestScore);
+                    }
+                }
+                return bestScore;
+            }
+        }
+
+        function checkWin() {
+            for (let condition of winningConditions) {
+                if (condition.every(index => board[index] === currentPlayer)) {
+                    return { win: true, condition };
+                }
+            }
+            return null;
+        }
+
+        function checkWinWithBoard(tempBoard) {
+            for (let condition of winningConditions) {
+                const player = tempBoard[condition[0]];
+                if (player && condition.every(index => tempBoard[index] === player)) {
+                    return { win: true, condition, player };
+                }
+            }
+            return null;
+        }
+
+        function checkDraw() {
+            return board.every(cell => cell !== null);
+        }
+
+        function checkDrawWithBoard(tempBoard) {
+            return tempBoard.every(cell => cell !== null);
+        }
+
+        function highlightWinningLine(condition) {
+            condition.forEach(index => {
+                document.querySelector(`[data-index="${index}"]`).classList.add('win');
+            });
+        }
+
+        function endGame(result) {
+            gameOver = true;
+            if (result === 'draw') {
+                draws++;
+                document.getElementById('draws').textContent = draws;
+                updateStatus("It's a draw!");
+            } else {
+                const winner = result.split(' ')[0];
+                if (winner === 'X') {
+                    xWins++;
+                    document.getElementById('xWins').textContent = xWins;
+                } else {
+                    oWins++;
+                    document.getElementById('oWins').textContent = oWins;
+                }
+                const message = gameMode === 'computer' 
+                    ? (winner === 'X' ? 'You win!' : 'Computer wins!') 
+                    : `Player ${winner} wins!`;
+                updateStatus(message);
+                triggerConfetti();
+            }
+        }
+
+        function updateStatus(message) {
+            document.getElementById('status').textContent = message;
+        }
+
+        function playAgain() {
+            board = Array(9).fill(null);
+            currentPlayer = 'X';
+            gameOver = false;
+            createBoard();
+            updateStatus(`${gameMode === 'computer' ? 'Your' : 'Player X\'s'} turn`);
+            document.getElementById('confetti').innerHTML = '';
+            if (gameMode === 'computer' && currentPlayer === 'O') { // If O starts, but here X starts
+                // Not needed
+            }
+        }
+
+        function resetScores() {
+            xWins = 0;
+            oWins = 0;
+            draws = 0;
+            document.getElementById('xWins').textContent = 0;
+            document.getElementById('oWins').textContent = 0;
+            document.getElementById('draws').textContent = 0;
+            document.getElementById('mode-selection').style.display = 'flex';
+            document.getElementById('board').innerHTML = '';
+            updateStatus('');
+            document.getElementById('play-again').style.display = 'none';
+            document.getElementById('reset-scores').style.display = 'none';
+            gameMode = null;
+            gameOver = false;
+        }
+
+        function triggerConfetti() {
+            const confettiContainer = document.getElementById('confetti');
+            for (let i = 0; i < 100; i++) { // More confetti
+                const confetti = document.createElement('div');
+                confetti.style.left = Math.random() * 100 + 'vw';
+                confetti.style.background = ['#f1c40f', '#e74c3c', '#27ae60', '#3498db'][Math.floor(Math.random() * 4)];
+                confetti.style.animationDelay = Math.random() * 2 + 's';
+                confetti.style.width = Math.random() * 10 + 5 + 'px';
+                confetti.style.height = Math.random() * 10 + 5 + 'px';
+                confettiContainer.appendChild(confetti);
+            }
+            setTimeout(() => confettiContainer.innerHTML = '', 3000);
+        }
+    </script>
+</body>
+</html>
